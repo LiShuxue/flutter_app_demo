@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final _logger = Logger();
 
@@ -241,7 +242,8 @@ class SecondPage extends StatefulWidget {
 
 class _SecondPageState extends State<SecondPage> {
   final int _currentIndex = 1; // 当前页面的索引，设置导航栏的active
-  String _text = '初始值，点击请求后会变化';
+  String _text = '初始值，点击发送请求后会变化';
+  int _number = 0;
 
   // 网络请求
   void _request() async {
@@ -256,6 +258,28 @@ class _SecondPageState extends State<SecondPage> {
     } on DioException catch (e) {
       _logger.d(e.message);
     }
+  }
+
+  // 设置持久化数据
+  Future<void> _setSharedPreferencesData() async {
+    final prefs = await SharedPreferences.getInstance();
+    int number = (prefs.getInt('number') ?? 0) + 1;
+    await prefs.setInt('number', number);
+  }
+
+  // 获取持久化数据
+  Future<void> _getSharedPreferencesData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final int number = prefs.getInt('number') ?? 0;
+    setState(() {
+      _number = number;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _getSharedPreferencesData();
   }
 
   // 覆写 build 方法
@@ -303,6 +327,19 @@ class _SecondPageState extends State<SecondPage> {
                 _request();
               },
               child: const Text('发送请求'),
+            ),
+            Text('上次存储的数据：$_number'),
+            ElevatedButton(
+              onPressed: () {
+                _setSharedPreferencesData();
+              },
+              child: const Text('存储数据'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _getSharedPreferencesData();
+              },
+              child: const Text('获取持久化的数据'),
             ),
           ],
         ),
