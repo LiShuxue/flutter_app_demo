@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 
 final _logger = Logger();
 
@@ -18,7 +19,37 @@ final _router = GoRouter(
   ],
 );
 
+// dio配置
+final dio = Dio();
+void dioConfig() {
+  dio.options.baseUrl = 'https://lishuxue.site';
+  dio.options.connectTimeout = const Duration(seconds: 5);
+  dio.options.receiveTimeout = const Duration(seconds: 10);
+
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (RequestOptions options, RequestInterceptorHandler handler) {
+        // 如果你想完成请求并返回一些自定义数据，你可以使用 `handler.resolve(response)`。
+        // 如果你想终止请求并触发一个错误，你可以使用 `handler.reject(error)`。
+        _logger.d('onRequest');
+        return handler.next(options);
+      },
+      onResponse: (Response response, ResponseInterceptorHandler handler) {
+        // 如果你想终止请求并触发一个错误，你可以使用 `handler.reject(error)`。
+        _logger.d('onResponse');
+        return handler.next(response);
+      },
+      onError: (DioException error, ErrorInterceptorHandler handler) {
+        // 如果你想完成请求并返回一些自定义数据，你可以使用 `handler.resolve(response)`。
+        _logger.d('onError');
+        return handler.next(error);
+      },
+    ),
+  );
+}
+
 void main() {
+  dioConfig();
   // 主方法启动app
   runApp(const MyApp());
 }
@@ -205,6 +236,15 @@ class SecondPage extends StatelessWidget {
 
   final int _currentIndex = 1; // 当前页面的索引，设置导航栏的active
 
+  void _request() async {
+    try {
+      Response response = await dio.get('/blog-api/common/homeinfo');
+      _logger.d(response.data.toString());
+    } on DioException catch (e) {
+      _logger.d(e.message);
+    }
+  }
+
   // 覆写 build 方法
   @override
   Widget build(BuildContext context) {
@@ -238,7 +278,21 @@ class SecondPage extends StatelessWidget {
         ]),
       ),
       // 内容部分
-      body: const Text('Second Page'),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // 主轴居中
+          crossAxisAlignment: CrossAxisAlignment.center, // 交叉轴居中
+          children: [
+            const Text('Second Page'),
+            ElevatedButton(
+              onPressed: () {
+                _request();
+              },
+              child: const Text('发送请求'),
+            ),
+          ],
+        ),
+      ),
       // 底部导航栏
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex, // active状态
