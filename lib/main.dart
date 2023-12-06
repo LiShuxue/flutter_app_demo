@@ -231,15 +231,28 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-class SecondPage extends StatelessWidget {
+class SecondPage extends StatefulWidget {
   const SecondPage({super.key});
 
-  final int _currentIndex = 1; // 当前页面的索引，设置导航栏的active
+  // 覆写 createState 方法
+  @override
+  State<SecondPage> createState() => _SecondPageState();
+}
 
+class _SecondPageState extends State<SecondPage> {
+  final int _currentIndex = 1; // 当前页面的索引，设置导航栏的active
+  String _text = '初始值，点击请求后会变化';
+
+  // 网络请求
   void _request() async {
     try {
       Response response = await dio.get('/blog-api/common/homeinfo');
-      _logger.d(response.data.toString());
+      var result = response.data;
+      String text = result['one']['text'];
+      _logger.d(text);
+      setState(() {
+        _text = text;
+      });
     } on DioException catch (e) {
       _logger.d(e.message);
     }
@@ -284,6 +297,7 @@ class SecondPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center, // 交叉轴居中
           children: [
             const Text('Second Page'),
+            Text(_text),
             ElevatedButton(
               onPressed: () {
                 _request();
