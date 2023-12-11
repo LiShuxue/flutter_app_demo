@@ -1,8 +1,11 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 final _logger = Logger();
 
@@ -49,6 +52,28 @@ void dioConfig() {
   );
 }
 
+// 全局状态 models
+class MyModel extends ChangeNotifier {
+  // 内部状态 _items
+  final List<int> _items = [1, 2, 3];
+  // 外部获取该状态，返回一个不可修改的
+  get items => UnmodifiableListView(_items);
+
+  // 内部状态 totalPrice
+  get totalPrice => _items.length * 42;
+
+  void add(int number) {
+    _items.add(number);
+    // 通知widget更新
+    notifyListeners();
+  }
+
+  void removeAll() {
+    _items.clear();
+    notifyListeners();
+  }
+}
+
 void main() {
   dioConfig();
   // 主方法启动app
@@ -63,13 +88,19 @@ class MyApp extends StatelessWidget {
   // 覆写 build 方法
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'My Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), // 定义颜色
-        useMaterial3: true, // 启用Material 3
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => MyModel()),
+      ],
+      child: MaterialApp.router(
+        title: 'My Flutter Demo',
+        theme: ThemeData(
+          colorScheme:
+              ColorScheme.fromSeed(seedColor: Colors.deepPurple), // 定义颜色
+          useMaterial3: true, // 启用Material 3
+        ),
+        routerConfig: _router, // 路由配置
       ),
-      routerConfig: _router, // 路由配置
     );
   }
 }
@@ -178,8 +209,20 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 // 处理按钮按下事件
                 _logger.d('button pressed');
+                // 修改全局状态
+                context.read<MyModel>().add(1);
               },
-              child: const Text('Press Me'),
+              child: const Text('更新全局状态'),
+            ),
+            Consumer<MyModel>(
+                builder: (context, my, child) =>
+                    Text('全局状态 Total price: ${my.totalPrice}')),
+            ElevatedButton(
+              onPressed: () {
+                // 修改全局状态
+                Provider.of<MyModel>(context, listen: false).removeAll();
+              },
+              child: const Text('清空全局状态'),
             ),
           ],
         ),
@@ -341,6 +384,12 @@ class _SecondPageState extends State<SecondPage> {
               },
               child: const Text('获取持久化的数据'),
             ),
+            Consumer<MyModel>(
+                builder: (context, my, child) =>
+                    Text('全局状态 items: ${my.items.toString()}')),
+            Consumer<MyModel>(
+                builder: (context, my, child) =>
+                    Text('全局状态 Total price: ${my.totalPrice}')),
           ],
         ),
       ),
